@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * crystal_bar fullname is crystal_best_answer_rule
+ * A module to implement the rule when a new answer accept to be the best one,
+ * we must unflag the old one.
+ */

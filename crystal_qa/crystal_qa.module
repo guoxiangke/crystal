@@ -1,51 +1,24 @@
 <?php
 /**
  * @file
- * An example module to redirect the path from a node view for at
- * specific type to a view.
+ * Almost all the Q&A project requirements which need code are placed in this module.
  */
 
 /**
  * Implementation of hook_init().
+ * redirect the url of the question type to questions/%
+ * and the answer to it's question page.
  */
 function crystal_qa_init() {
-  // Using arg() instead of menu_get_item(). Rumor has it menu_get_item
-  // can occassionally cause WSOD.
-  // We make sure arg(2) is empty so we do not redirect on edit or other
-  // node sub pages.
   if (arg(0) == 'node' && is_numeric(arg(1)) && arg(2) == '') {
-    
       $node = node_load(arg(1));
       if ($node) {
         if ($node->type == 'answer') {
-          //drupal_goto('question/'. $node->field_answer['und'][0]['target_id']);
+          drupal_goto('question/'. $node->field_answer['und'][0]['target_id']);
         }
         elseif ($node->type == 'question') {
-          //drupal_goto('question/'. $node->nid);
+          drupal_goto('question/'. $node->nid);
         }
     }
   }
 }
-
-/**
- * Act on a flagging.
- *
- * @param $op
- *  The operation being performed: one of 'flag' or 'unflag'.
- * @param $flag
- *  The flag object.
- * @param $content_id
- *  The id of the content (aka entity) the flag is on.
- * @param $account
- *  The user account performing the action.
- * @param $fcid = 
- *  The id of the flagging in the {flag_content} table.
- */
-function crystal_qa_flag($op, $flag, $content_id, $account, $fcid) {
-	
-}
-
-function crystal_qa_form_alter(&$form, &$form_state, $form_id) {
-	//dpm($form,$form_id);
-}
-
