@@ -1,13 +1,27 @@
 <?php
 /**
  * @file
- * Almost all the Q&A project requirements which need code are placed in this module.
+ * This is the main module of the Q&A project.
+	Almost all the project common requirements which need code are placed in this module.
+	The requirements are:
+		1.Redirect the node page(question & answer ) to the view page(integrate one question and anwsers one page) .eg: 'node/1' => 'questions/[nid]'.
+		2.Add a new reference field value to the question when a new answer was created for it. 
+		.....
+	dependencies: 
+		views
+		entityreference
+		rules
+	incs:
+		crystal_qa.rules.inc
+	hooks:
+		hook_init() ［Implementation the No 1 requirements above.］
+		hook_rules_condition_info()  ［Implementation the No 2 requirements above.］
  */
 
 /**
  * Implementation of hook_init().
- * redirect the url of the question type to questions/%
- * and the answer to it's question page.
+ * Redirect the node page(question & answer ) to the view page(integrate a question and anwsers one page) .
+ * eg:'node/1' => 'questions/[nid]'.
  */
 function crystal_qa_init() {
   if (arg(0) == 'node' && is_numeric(arg(1)) && arg(2) == '') {
@@ -21,4 +35,37 @@ function crystal_qa_init() {
         }
     }
   }
+}
+/**
+ * Allow modules to allow or deny access to flagging.
+ *
+ * @param $flag
+ *  The flag object.
+ * @param $content_id
+ *  The id of the entity in question.
+ * @param $action
+ *  The action to test. Either 'flag' or 'unflag'.
+ * @param $account
+ *  The user on whose behalf to test the flagging action.
+ *
+ * @return
+ *   Boolean TRUE if the user is allowed to flag/unflag the given content.
+ *   FALSE otherwise.
+ *
+ * @see flag_flag:access()
+ */
+ /**
+ * Implementation of hook_flag_access().
+ * 
+ */
+function crystal_qa_flag_access($flag, $content_id, $action, $account) {
+  // Restrict access by authorship. It's important that TRUE is never returned
+  // here, otherwise we'd grant permission even if other modules denied access.
+	if (($flag->content_type == 'node') && ($node = node_load($content_id))) {
+		if($node->type=='answer'){
+			$question_nid = $node->field_answer['und']['0']['target_id'];
+			$question = node_load($question_nid);
+			return $question->uid==$account->uid ? TRUE : FALSE;
+		}
+	}
 }

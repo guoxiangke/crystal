@@ -3,8 +3,10 @@
 /**
  * @file Includes any rules integration provided by the module.
  */
+
  /**
  * implementation of hook_rules_condition_info()
+ * Add a new reference field value to the question when a new answer was created for it. 
  */
 function crystal_qa_rules_action_info() {
   return array(
@@ -19,7 +21,7 @@ function crystal_qa_rules_action_info() {
   );
 }
 /**
- * Condition packages_condition_packagetype
+ *  Add a new reference field value to the question when a new answer was created for it. 
  */
 function crystal_qa_action_new_answer($answer) {
 	$question_nid = $answer->field_answer['und']['0']['target_id'];
