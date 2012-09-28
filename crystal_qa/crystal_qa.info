@@ -1,0 +1,4 @@
+name = crystal_qa
+description = crystal stack overflow(crystal_qa).
+core = 7.x
+package = "A-DEV"

@@ -1,0 +1,4 @@
+name = crystal_bar
+description =crystal best answer rule(crystal_bar).
+core = 7.x
+package = "A-DEV"
