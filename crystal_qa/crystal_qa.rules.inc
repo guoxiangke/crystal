@@ -9,7 +9,7 @@
  * Add a new reference field value to the question when a new answer was created for it. 
  */
 function crystal_qa_rules_action_info() {
-  return array(
+	return array(
     'crystal_qa_action_new_answer' => array(
       'label' => t('Add the answer to the question\'s Entity Reference field when a new answer was created.'),
       'arguments' => array(

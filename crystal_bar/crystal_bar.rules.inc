@@ -66,7 +66,7 @@ function crystal_bar_action_unflag_the_old_answer($new_answer) {
 	$question_nid = $new_answer->field_answer['und']['0']['target_id'];
 	$question = node_load($question_nid);
 	$answers_array = $question->field_answers['und'];
-	$flag_name = 'accepted';
+	$flag_name = 'accepted';// here also,the name must match system flag setting in /admin/structure/flags
 	if (!($flag = flag_get_flag($flag_name))) {
 	    // Flag does not exist.
 	    return;
