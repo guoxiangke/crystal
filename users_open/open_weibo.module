@@ -1,0 +1,189 @@
+<?php
+// $Id: sina_login.info,v 0.1 20110523 Felix $
+
+/**
+ * @file
+ * Sina weibo users shared login.
+ */
+/**
+ * Implementation of hook_menu.
+ */
+function open_weibo_menu() {  
+  $items['open/weibo'] = array(
+    'description' => '新浪微博用户登录或者绑定',
+    'page callback' => 'weibo_login',
+    //'access callback' => 'user_is_anonymous',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'open_weibo.pages.inc',
+  );
+  $items['user/%user/open/weibo'] = array(
+    'title' => 'weibo个人设置',
+    'page callback' => 'open_weibo_page_config',
+    'page arguments' => array(1),
+    'access callback' => 'user_edit_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'open_weibo.pages.inc',
+  );
+  $items['user/%user/open/weibo/remove'] = array(
+    'title' => '解除绑定weibo',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('open_weibo_remove_confirm'),
+    'access callback' => 'user_edit_access',
+    'access arguments' => array(1),
+    'type' => MENU_CALLBACK,
+    'file' => 'open_weibo.pages.inc',
+  );
+  $items['admin/config/openusers/weibo'] = array(
+    'title' => t('open users setting for weibo'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('open_weibo_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'open_weibo.config.inc',
+  );
+  
+  return $items;
+}
+
+function open_weibo_get_config(){
+	
+	$weibo_config['open_weibo_app_key'] = variable_get('open_weibo_app_key', NULL);
+	$weibo_config['open_weibo_app_secret'] = variable_get('open_weibo_app_secret', NULL);
+	$weibo_config['open_weibo_redirect_uri'] = variable_get('open_weibo_redirect_uri', NULL);
+
+	return $weibo_config;
+}
+/**
+ * 使用新浪微博帐号登录或绑定帐号的权限
+ */
+function open_weibo_is_access() {
+  global $user;
+  return $user->uid > 0 || variable_get('sina_login_is_login', 1);
+}
+
+/**
+ * Implementation of hook_form_alter
+ * add weibo login links to login block or login form.
+ */
+function open_weibo_form_alter(&$form, $form_state, $form_id) {
+	$weibo_config = open_weibo_get_config();
+	if($form_id!='user_login_block'){		
+		//dpm($form,$form_id);
+	}//if($_SESSION)dpm($_SESSION);
+	if($weibo_config['open_weibo_app_key']&&$weibo_config['open_weibo_app_secret']){
+		if($form_id == 'user_login_block' || $form_id == 'user_login'){
+			if (variable_get('open_weibo_enabled', 1)) {
+				$items[] = l(t('login with weibo'), 'open/weibo', array('attributes' => array('title' => t('使用新浪微博登陆本站.'))));
+		 }
+		 $form['open_weibo_login'] = array('#markup' => theme('item_list', array('items' => $items)));
+		}
+	}
+  /*
+  dpm(open_users_user_config(),'open_users_user_config');
+  dpm($_SESSION['weibo_access_token'],'$_SESSION-weibo_access_token');
+
+  if(!$weibo_access_token = $_SESSION['weibo_access_token']){
+    $weibo_access_token = db_result(db_query('SELECT open_token FROM {users} WHERE `name`  LIKE "'.strtolower($new_name).'%"'));
+  }
+  $weibo_config = open_weibo_get_config();
+  $o = new SaeTOAuthV2( $weibo_config['app_key'] , $weibo_config['app_secret'] );
+   //($client_id, $client_secret, $access_token = NULL, $refresh_token = NULL) 
+  $keys = array('refresh_token'=>$weibo_access_token);//old token
+  dpm($o);
+  //$weibo_access_token_array = $o->getAccessToken($type = 'token', $keys);
+  dpm($weibo_access_token_array,'$weibo_access_token_array');
+  //$c = new SaeTClientV2( $weibo_config['app_key'], $weibo_config['app_secret'],$weibo_access_token_array['access_token'], $refresh_token = NULL);
+   //$ms = $c->home_timeline( $page = 1, $count = 50, $since_id = 0, $max_id = 0, $base_app = 0, $feature = 0 );
+         dpm($ms,'glable $c');
+         $ouser = unserialize(urldecode(base64_decode('YSUzQTclM0ElN0JzJTNBOCUzQSUyMm9wZW5fdWlkJTIyJTNCcyUzQTEwJTNBJTIyMTgwMTQ5Nzk4MSUyMiUzQnMlM0E5JTNBJTIyb3Blbl9uYW1lJTIyJTNCcyUzQTEzJTNBJTIyQmx1ZXNreV9zdGlsbCUyMiUzQnMlM0ExMCUzQSUyMm9wZW5fdG9rZW4lMjIlM0JzJTNBMzIlM0ElMjIyLjAwRHZ0dXhCeDRvVTJCYzM5MzA1NzdhNTBPZ1VFZyUyMiUzQnMlM0E5JTNBJTIyb3Blbl90eXBlJTIyJTNCcyUzQTUlM0ElMjJ3ZWlibyUyMiUzQnMlM0ExMyUzQSUyMm9wZW5fcGljdHVyZSslMjIlM0JzJTNBNDglM0ElMjJodHRwJTNBJTJGJTJGdHAyLnNpbmFpbWcuY24lMkYxODAxNDk3OTgxJTJGNTAlMkYxMjk3NDcwNDM4JTJGMSUyMiUzQnMlM0ExNCUzQSUyMm9wZW5fc2lnbmF0dXJlJTIyJTNCcyUzQTIxJTNBJTIyJUU1JUE0JUE5JUU3JUE5JUJBJUU0JUJFJTlEJUU3JTg0JUI2JUU4JTk0JTlBJUU4JTkzJTlEJUVGJUJDJTgxJTIyJTNCcyUzQTEzJTNBJTIyb3Blbl9sb2NhdGlvbiUyMiUzQmElM0E0JTNBJTdCcyUzQTQlM0ElMjJjaXR5JTIyJTNCcyUzQTElM0ElMjI4JTIyJTNCcyUzQTglM0ElMjJwcm92aW5jZSUyMiUzQnMlM0EyJTNBJTIyMTElMjIlM0JzJTNBOCUzQSUyMmxvY2F0aW9uJTIyJTNCcyUzQTE2JTNBJTIyJUU1JThDJTk3JUU0JUJBJUFDKyVFNiVCNSVCNyVFNiVCNyU4MCVFNSU4QyVCQSUyMiUzQnMlM0E0JTNBJTIyYmxvZyUyMiUzQnMlM0EzMSUzQSUyMmh0dHAlM0ElMkYlMkZibG9nLnNpbmEuY29tLmNuJTJGZGFsZTMwMiUyMiUzQiU3RCU3RA%3D%3D')));
+         dpm($ouser,'$ouser');*/
+}
+
+
+/**
+ * @Implement of hook_user()
+ */
+function open_weibo_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'delete':
+      db_query("DELETE FROM {users_open} WHERE uid = %d AND open_type = 'weibo'", $account->uid);
+    break;   
+  }
+}
+
+
+/**
+ * Respond to creation of a new node synch.
+ *
+ * This hook is invoked from node_save() after the node is inserted into the
+ * node table in the database, after the type-specific hook_insert() is invoked,
+ * and after field_attach_insert() is called.
+ *
+ * @param $node
+ *   The node that is being created.
+ *
+ * @ingroup node_api_hooks
+ */
+function open_weibo_node_insert($node) {
+	global $user;
+	$synch_type = db_query('select synch_type from {open_users_synch_type} WHERE uid = :uid',array(':uid'=>$user->uid))->fetchField();
+
+	$synch_type = array_filter(unserialize($synch_type));	
+	
+	if(key_exists($node->type, $synch_type)&&open_weibo_synch($node)){
+		drupal_set_message('tbcg!');
+	};
+}
+
+function open_weibo_synch($node){
+	if(isset($_SESSION['open_weibo_access_token'])){
+		require_once("weibo_sdk/saetv2.ex.class.php");
+		$weibo_config = open_weibo_get_config();
+		$token = $_SESSION['open_weibo_access_token'];
+		$c = new SaeTClientV2( $weibo_config['open_weibo_app_key'], $weibo_config['open_weibo_app_secret'],$token['access_token']);
+    $status = '我在'.variable_get('site_name').'发布了'.$node->type.'：'.$node->title;
+    $status .= '快来看看啊url';
+    $synch = $c->update( $status, $lat = NULL, $long = NULL, $annotations = NULL );
+ 		dpm($synch);
+		return  $synch['mid']?TRUE:FALSE;
+	}
+}
+
+/**
+ * 发布微博表单
+ * @param (array) &$form_state
+ * @param (int) $uid
+ */
+function open_weibo_test_form() {
+  $form['weibo_update_text'] = array(
+    '#type' => 'textarea',
+    '#title' => '发布到新浪微博',
+    '#description' => '最多140个字符，中英文均算一个字符。还可以输入<strong id="sina_open_tweet_text_count"></strong>个字符。',
+    '#required' => 1
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => '确认发布'
+  );
+  drupal_add_js(drupal_get_path('module', 'sina_open') .'/sina_open.js');
+  return $form;
+}
+
+function open_weibo_test_form_validate($form, &$form_state) {
+  $form_state['values']['weibo_update_text'] = trim($form_state['values']['weibo_update_text']);
+  if (drupal_strlen($form_state['values']['text']) > 140) {
+    form_set_error('sina_open_tweet_text', '不大于 140 个字符');
+  } else if (!$result=weibo_open_update($form_state['values']['weibo_update_text'])) {
+    form_set_error('weibo_update_text', '请重试');
+  }
+  //为啥没有 提示信息呢？？？？？？？git 
+   /* dpm($result);  
+  if ($result['mid']) {
+    drupal_set_message('已成功发送到新浪微博');
+  } else {
+    drupal_set_message('发送到新浪微博失败', 'error');
+    return false;
+  }
+  */
+}
